@@ -9,7 +9,7 @@ def init_db():
     conn = sqlite3.connect('example.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS items
-                 (id INTEGER PRIMARY KEY, name TEXT)''')
+                 (id INTEGER PRIMARY KEY, name TEXT, status INTEGER)''')
     conn.commit()
     conn.close()
 
@@ -48,7 +48,7 @@ def main(page:Page):
         conn = sqlite3.connect('example.db')
         c = conn.cursor()
         if name: 
-            c.execute("INSERT INTO items (name) VALUES (?)", (name,))
+            c.execute("INSERT INTO items (name,status) VALUES (?,?)", (name,0))
         else:
            
             page.close_bottom_sheet() 
@@ -80,25 +80,64 @@ def main(page:Page):
         c.execute("DELETE FROM items WHERE id = ?", (id,))
         conn.commit()
         conn.close()
+        
+    def CrossTxt(e,id):
+        if e.control.style == TextStyle(decoration=TextDecoration.NONE):
+            e.control.style = TextStyle(decoration=TextDecoration.LINE_THROUGH)
+            conn = sqlite3.connect('example.db')
+            c = conn.cursor()
+            c.execute("UPDATE items SET status = ? WHERE id = ?", (1, id))
+            conn.commit()
+            conn.close()
+        else:
+            e.control.style = TextStyle(decoration=TextDecoration.NONE)
+            conn = sqlite3.connect('example.db')
+            c = conn.cursor()
+            c.execute("UPDATE items SET status = ? WHERE id = ?", (0, id))
+            conn.commit()
+            conn.close()
+            
+        page.update()
 
     def load_items():
         items = get_items()
         items_list.controls.clear()
+        deco = None
         for item in items:
-            items_list.controls.append(
-                Row([
-                    
-                    Text(value=item[1],overflow=TextOverflow.ELLIPSIS,width=200,no_wrap=False),
+            if item[2] == 0:
+                items_list.controls.append(
                     Row([
+                        #Container(content=Text(value=item[1],overflow=TextOverflow.ELLIPSIS,width=200,no_wrap=False),on_click=lambda e: CrossTxt(e)),
+                        Text(spans=[
+                            TextSpan(text=item[1],style= TextStyle(decoration=TextDecoration.NONE),on_click=lambda e: CrossTxt(e,item[0]))
+                        ],overflow=TextOverflow.ELLIPSIS,width=200,no_wrap=False),
+                        Row([
+                            IconButton(
+                            icons.EDIT, on_click=lambda e, id=item[0]: on_edit_item(id)),
+                        
                         IconButton(
-                        icons.EDIT, on_click=lambda e, id=item[0]: on_edit_item(id)),
-                    
-                    IconButton(
-                        icons.DELETE, on_click=lambda e, id=item[0]: on_delete_item(id))
-                    ])
-                    
-                ],alignment=MainAxisAlignment.SPACE_BETWEEN, height=40
-            ))
+                            icons.DELETE, on_click=lambda e, id=item[0]: on_delete_item(id))
+                        ])
+                        
+                    ],alignment=MainAxisAlignment.SPACE_BETWEEN, height=40
+                ))
+            else:
+                items_list.controls.append(
+                    Row([
+                        #Container(content=Text(value=item[1],overflow=TextOverflow.ELLIPSIS,width=200,no_wrap=False),on_click=lambda e: CrossTxt(e)),
+                        Text(spans=[
+                            TextSpan(text=item[1],style= TextStyle(decoration=TextDecoration.LINE_THROUGH),on_click=lambda e: CrossTxt(e,item[0]))
+                        ],overflow=TextOverflow.ELLIPSIS,width=200,no_wrap=False),
+                        Row([
+                            IconButton(
+                            icons.EDIT, on_click=lambda e, id=item[0]: on_edit_item(id)),
+                        
+                        IconButton(
+                            icons.DELETE, on_click=lambda e, id=item[0]: on_delete_item(id))
+                        ])
+                        
+                    ],alignment=MainAxisAlignment.SPACE_BETWEEN, height=40
+                ))
         page.close_bottom_sheet()
         page.update()
 
@@ -188,6 +227,4 @@ def main(page:Page):
 
     
 
-
 app(target=main)
-
